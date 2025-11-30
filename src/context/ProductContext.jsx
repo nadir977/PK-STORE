@@ -8,29 +8,33 @@ export const ProductProvider = ({ children }) => {
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [cartItems, setCartItems] = useState([]);
-
+ 
+  const [cartItems, setCartItems] = useState(() => {
+    const saved = localStorage.getItem("cartItems");
+    return saved ? JSON.parse(saved) : [];
+  });
+ 
+  useEffect(() => {
+    localStorage.setItem("cartItems", JSON.stringify(cartItems));
+  }, [cartItems]);
+ 
   useEffect(() => {
     fetch("https://fakestoreapi.com/products")
       .then((res) => res.json())
       .then((data) => {
         setProducts(data);
         setFilteredProducts(data);
-        const uniqueCategories = [
-          "all",
-          ...new Set(data.map((p) => p.category)),
-        ];
+        const uniqueCategories = ["all", ...new Set(data.map((p) => p.category))];
         setCategories(uniqueCategories);
-      });
+      })
+      .catch((err) => console.error("Error fetching products:", err));
   }, []);
-
+ 
   useEffect(() => {
     let tempProducts = [...products];
 
     if (selectedCategory !== "all") {
-      tempProducts = tempProducts.filter(
-        (p) => p.category === selectedCategory
-      );
+      tempProducts = tempProducts.filter((p) => p.category === selectedCategory);
     }
 
     if (searchTerm !== "") {
@@ -41,21 +45,20 @@ export const ProductProvider = ({ children }) => {
 
     setFilteredProducts(tempProducts);
   }, [products, selectedCategory, searchTerm]);
-
+ 
   const addToCart = (product) => {
-  setCartItems((prev) => {
-    const exists = prev.find((item) => item.id === product.id);
+    setCartItems((prev) => {
+      const exists = prev.find((item) => item.id === product.id);
 
-    if (exists) {
-      return prev.map((item) =>
-        item.id === product.id ? { ...item, qty: item.qty + 1 } : item
-      );
-    }
+      if (exists) {
+        return prev.map((item) =>
+          item.id === product.id ? { ...item, qty: item.qty + 1 } : item
+        );
+      }
 
-    return [...prev, { ...product, qty: 1 }];
-  });
-};
-
+      return [...prev, { ...product, qty: 1 }];
+    });
+  };
 
   return (
     <ProductContext.Provider
@@ -69,7 +72,6 @@ export const ProductProvider = ({ children }) => {
         cartItems,
         setCartItems,
         addToCart,
-
       }}
     >
       {children}
